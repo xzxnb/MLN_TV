@@ -24,7 +24,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import itertools
-
+from fractions import Fraction
 # 导入外部模块中的函数
 def mln_sentence(mln: MLNProblem, hard_rule: bool = True, pred_new: str = AUXILIARY_PRED_NAME):
     weightings: dict[Pred, tuple[Rational, Rational]] = dict()
@@ -47,7 +47,9 @@ def mln_sentence(mln: MLNProblem, hard_rule: bool = True, pred_new: str = AUXILI
                 # weightings[aux_pred] = (Rational(Fraction(math.exp(weighting)).numerator,
                 #                                  Fraction(math.exp(weighting)).denominator), Rational(1, 1))
                 # numerator, denominator = float.as_integer_ratio(weighting)
-                weightings[aux_pred] = (Rational(weighting, 1), Rational(1, 1))
+                # weightings[aux_pred] = (Rational(weighting, 1), Rational(1, 1))
+                weightings[aux_pred] = (Rational(Fraction(weighting).numerator,
+                                                 Fraction(weighting).denominator), Rational(1, 1))
             for free_var in free_vars:
                 formula = QuantifiedFormula(Universal(free_var), formula)
             sentence = sentence & formula
@@ -174,12 +176,13 @@ def MLN_TV(mln1: str,mln2: str, w1:float, w2:float) -> Rational:
 if __name__ == '__main__':
     mln1 = "models\\E-R1.mln"
     mln2 = "models\\E-R2.mln"
-    w1 = [1 + i*0.5 for i in range(19)]
-    w2 = [1 + i*0.5 for i in range(19)]
+    w1 = [0.2 + i*0.2 for i in range(15)]
+    w2 = [0.2 + i*0.2 for i in range(15)]
 
     combinations = list(itertools.product(w1, w2))
     res = []
     for w in combinations:
+        print(w[0],w[1],"..................................................")
         res.append(MLN_TV(mln1, mln2, w[0], w[1]))
     print(res)
     x = [comb[0] for comb in combinations]
@@ -194,13 +197,14 @@ if __name__ == '__main__':
     ax = fig.add_subplot(111, projection='3d')
 
     # 绘制散点图
-    ax.scatter(x, y, res)
+    ax.scatter(x, y, res, s=100, c='red', cmap='viridis')
 
     # 设置标签
     ax.set_xlabel('E-R1')
     ax.set_ylabel('E-R2')
     ax.set_zlabel('TV')
-
+    ax.set_title('0-0.2-4')
+    plt.savefig('TV0_4.png')
     # 显示图形
     plt.show()
 
