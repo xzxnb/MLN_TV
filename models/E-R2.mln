@@ -8,6 +8,6 @@ E(X,Y) -> E(Y,X).
 # write a hard rule by the same syntax as a WFOMC sentence
 # \forall X: (\exists Y: (friends(X,Y))).
 
-vertices = 3
+vertices = 7
 # optional cardinality constraint
 # |smokes| = 1

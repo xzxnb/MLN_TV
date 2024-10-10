@@ -176,28 +176,33 @@ def MLN_TV(mln1: str,mln2: str, w1:float, w2:float) -> Rational:
 if __name__ == '__main__':
     mln1 = "models\\E-R1.mln"
     mln2 = "models\\E-R2.mln"
-    w1 = [0.2 + i*0.2 for i in range(15)]
-    w2 = [0.2 + i*0.2 for i in range(15)]
+    w1 = [0.2 + i*0.2 for i in range(20)]
+    w2 = [0.2 + i*0.2 for i in range(20)]
 
     combinations = list(itertools.product(w1, w2))
     res = []
     for w in combinations:
-        print(w[0],w[1],"..................................................")
-        res.append(MLN_TV(mln1, mln2, w[0], w[1]))
-    print(res)
+        res.append(round_rational(MLN_TV(mln1, mln2, w[0], w[1])))
+    for a in res:
+        print(res)
+
     x = [comb[0] for comb in combinations]
     y = [comb[1] for comb in combinations]
 
     x = np.array(x, dtype=float)
     y = np.array(y, dtype=float)
-    res = np.array(res, dtype=float)
-
+    res = 0.5*np.array(res, dtype=float)
+    i = 0
+    for w in combinations:
+        print('w[0]: ', w[0], 'w[1]: ', w[1], 'res', res[i])
+        i = i+1
+    print('i: ',i)
     # 创建三维图
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
     # 绘制散点图
-    ax.scatter(x, y, res, s=100, c='red', cmap='viridis')
+    ax.scatter(x, y, res, s=100, c=res, cmap='viridis')
 
     # 设置标签
     ax.set_xlabel('E-R1')
