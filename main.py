@@ -25,7 +25,10 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import itertools
 from fractions import Fraction
+import plotly.graph_objects as go
 # 导入外部模块中的函数
+
+# 从mlnproblem构造sentence，如何hard_rule为T，则构造硬约束的非；否则正常构造等价sentence
 def mln_sentence(mln: MLNProblem, hard_rule: bool = True, pred_new: str = AUXILIARY_PRED_NAME):
     weightings: dict[Pred, tuple[Rational, Rational]] = dict()
     if hard_rule:
@@ -98,12 +101,14 @@ def count_distribution_(context: WFOMCContext, preds1: list[Pred], preds2: list[
     symbols = [pred2sym[pred] for pred in preds]
     count_dist = {}
     res = expand(res)
-    if context_c.decode_result(res) ==0:
-        return {'0':0}
+    if context_c.decode_result(res) == 0:
+        return {(0, 0): Rational(0, 1)}
     for degrees, coef in coeff_dict(res, symbols):
         count_dist[degrees] = coef
     return count_dist
-def MLN_TV(mln1: str,mln2: str, w1:float, w2:float) -> Rational:
+
+# 输出俩mln的TVdistance和两个mln对应的属性（权重或边平均个数）
+def MLN_TV(mln1: str,mln2: str, w1:float, w2:float) -> [float, float, float]:
     if mln1.endswith('.mln'):
         with open(mln1, 'r') as f:
             input_content = f.read()
@@ -160,17 +165,31 @@ def MLN_TV(mln1: str,mln2: str, w1:float, w2:float) -> Rational:
     count_dist2 = count_distribution_(context1, list(weights1.keys()), list(weights2.keys()), 2)
 
     res = Rational(0, 1)
+    # x, y分别代表两个mln在各自weight下平均边的条数
+    x = 0.0
+    y = 0.0
+    # 同时满足第一个mln和第二个mln硬约束的情况
     for key in count_dist1:
+        x = x + key[0]*count_dist1[key] / Z1
+        y = y + key[1]*count_dist2[key] / Z2
         res = res + abs(count_dist1[key] / Z1 - count_dist2[key] / Z2)
 
+    # 不满足第一个mln的硬约束加上第二个mln
     count_dist3 = count_distribution_(context2, list(weights1_hard.keys()), list(weights2.keys()), 2)
     for key in count_dist3:
+        y = y + key[1]*count_dist3[key] / Z2
         res = res + abs(count_dist3[key] / Z2)
 
+    # 不满足第二个mln的硬约束加上第一个mln
     count_dist4 = count_distribution_(context3, list(weights1.keys()), list(weights2_hard.keys()), 1)
     for key in count_dist4:
+        x = x + key[0] * count_dist4[key] / Z1
         res = res + abs(count_dist4[key] / Z1)
-    return res
+    x = float(round_rational(x))/2
+    y = float(round_rational(y))/2
+    res = 0.5*float(round_rational(res))
+    # return [w1, w2, res]
+    return [x, y, res]
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
@@ -182,35 +201,42 @@ if __name__ == '__main__':
     combinations = list(itertools.product(w1, w2))
     res = []
     for w in combinations:
-        res.append(round_rational(MLN_TV(mln1, mln2, w[0], w[1])))
+        res.append(MLN_TV(mln1, mln2, w[0], w[1]))
     for a in res:
         print(res)
-
-    x = [comb[0] for comb in combinations]
-    y = [comb[1] for comb in combinations]
-
-    x = np.array(x, dtype=float)
-    y = np.array(y, dtype=float)
-    res = 0.5*np.array(res, dtype=float)
-    i = 0
-    for w in combinations:
-        print('w[0]: ', w[0], 'w[1]: ', w[1], 'res', res[i])
-        i = i+1
-    print('i: ',i)
+    res = np.array(res)
     # 创建三维图
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-
-    # 绘制散点图
-    ax.scatter(x, y, res, s=100, c=res, cmap='viridis')
-
-    # 设置标签
-    ax.set_xlabel('E-R1')
-    ax.set_ylabel('E-R2')
-    ax.set_zlabel('TV')
-    ax.set_title('0-0.2-4')
-    plt.savefig('TV0_4.png')
-    # 显示图形
-    plt.show()
-
-
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111, projection='3d')
+    # # 绘制散点图
+    # ax.scatter(res[:, 0], res[:, 1], res[:, 2], s=100, c=res, cmap='viridis')
+    # # 设置标签
+    # ax.set_xlabel('E-R1')
+    # ax.set_ylabel('E-R2')
+    # ax.set_zlabel('TV')
+    # ax.set_title('0-0.2-4')
+    # fig.write_html("3d_scatter.html")
+    # plt.savefig('TV0_4.png')
+    # # 显示图形
+    # plt.show()
+    # fig = go.Figure(data=[go.Scatter3d(x=res[:, 0], y=res[:, 1], z=res[:, 2], mode='markers')])
+    fig = go.Figure(data=[go.Scatter3d(
+        x=res[:, 0],
+        y=res[:, 1],
+        z=res[:, 2],
+        mode='markers',
+        marker=dict(
+            size=10,  # 点的大小
+            color=res[:, 2],  # 使用 z 轴的值作为颜色
+            colorscale='Viridis',  # 颜色渐变方案
+            colorbar=dict(title='Z轴值'),  # 添加颜色条
+            showscale=True  # 显示颜色条
+        )
+    )])
+    # 设置图形标题和坐标轴标签
+    fig.update_layout(title='edge-domain7', scene=dict(
+                    xaxis_title='E-R1',
+                    yaxis_title='E-R2',
+                    zaxis_title='TV'))
+    fig.write_html('domain_7.html')
+    fig.show()
