@@ -1,4 +1,7 @@
 from __future__ import annotations
+
+from lib2to3.fixes.fix_input import context
+
 from sampling_fo2.wfomc import standard_wfomc, faster_wfomc, Algo, wfomc
 
 from sampling_fo2.problems import MLNProblem, WFOMCSProblem
@@ -26,7 +29,82 @@ from mpl_toolkits.mplot3d import Axes3D
 import itertools
 from fractions import Fraction
 import plotly.graph_objects as go
+from sympy import diff, symbols
 # 导入外部模块中的函数
+def df(f, x):
+    ''' Derivative of a given function f(x)
+
+    Parameters
+    ----------------
+    f: function f(x) for which f'(x) is to be found.
+    x: variable of differentiation
+
+    Returns
+    ----------------
+    function f'(x) for the given f(x)
+    '''
+    return diff(f, x)
+
+
+def newton(f, x: symbols, x0: int, epsilon, max_iter: int):
+    '''Approximate solution of f(x)=0 by Newton Raphson Method.
+
+    Parameters
+    ----------------
+    f : function for which we are trying to approximate the solution at f(x)=0
+    x0 : number
+        Initial guess for a solution f(x)=0.
+    epsilon : number
+        Stopping criteria is abs(f(x)) < epsilon.
+    max_iter : integer
+        Maximum number of iterations
+
+    Returns
+    ----------------
+    integer
+        Solution for f(x) = 0 as obtained by the Newton Raphson Method
+    '''
+    xn = x0
+    ddx = df(f, x)
+    for n in range(0, max_iter):
+        fxn = f.subs(x, xn)
+        if abs(fxn) < epsilon:
+            print("Solution found after ", n, "iterations.")
+            return xn
+        dfxn = ddx.subs(x, xn)
+        if dfxn == 0:
+            print("Zero Derivative, no solution found.")
+            return None
+        xn = xn - fxn / dfxn
+    print("Maximum Iterations exceeded. No solutions found.")
+    return None
+
+def edge_weight(mln: str):
+    if mln.endswith('.mln'):
+        with open(mln, 'r') as f:
+            input_content = f.read()
+        mln_problem = mln_parse(input_content)
+    weightings: dict[Pred, tuple[Rational, Rational]] = dict()
+    x = symbols('x')
+    sentence = top
+    for weighting, formula in zip(*mln_problem.rules):
+        free_vars = formula.free_vars()
+        if weighting != float('inf'):
+            aux_pred = new_predicate(len(free_vars), '@F')
+            formula = Equivalence(formula, aux_pred(*free_vars))
+            weightings[aux_pred] = (Rational(Fraction(weighting).numerator,
+                                             Fraction(weighting).denominator), Rational(1, 1))
+        # 给free_var加上全称量词
+        for free_var in free_vars:
+            formula = QuantifiedFormula(Universal(free_var), formula)
+        sentence = sentence & formula
+    context = WFOMCSProblem(sentence, mln_problem.domain, weightings, None)
+    pred2weight = {}
+
+
+
+
+
 
 # 从mlnproblem构造sentence，如何hard_rule为T，则构造硬约束的非；否则正常构造等价sentence
 def mln_sentence(mln: MLNProblem, hard_rule: bool = True, pred_new: str = AUXILIARY_PRED_NAME):
@@ -53,6 +131,7 @@ def mln_sentence(mln: MLNProblem, hard_rule: bool = True, pred_new: str = AUXILI
                 # weightings[aux_pred] = (Rational(weighting, 1), Rational(1, 1))
                 weightings[aux_pred] = (Rational(Fraction(weighting).numerator,
                                                  Fraction(weighting).denominator), Rational(1, 1))
+            # 给free_var加上全称量词
             for free_var in free_vars:
                 formula = QuantifiedFormula(Universal(free_var), formula)
             sentence = sentence & formula
@@ -88,6 +167,8 @@ def count_distribution_(context: WFOMCContext, preds1: list[Pred], preds2: list[
         pred2sym[pred] = sym
 
     context_c.weights.update(pred2weight)
+
+
     aa = context_c.weights
 
     if algo == Algo.STANDARD:
@@ -156,7 +237,7 @@ def MLN_TV(mln1: str,mln2: str, w1:float, w2:float) -> [float, float, float]:
     wfomcs_problem2 = sentence_WFOMCSProblem(sentence1_hard, weights1_hard, sentence2, weights2, domain)
     wfomcs_problem3 = sentence_WFOMCSProblem(sentence1, weights1, sentence2_hard, weights2_hard, domain)
 
-
+    # 分别为包含俩硬约束和只包含其中一个硬约束的情况
     context1 = WFOMCContext(wfomcs_problem1)
     context2 = WFOMCContext(wfomcs_problem2)
     context3 = WFOMCContext(wfomcs_problem3)
@@ -195,9 +276,15 @@ def MLN_TV(mln1: str,mln2: str, w1:float, w2:float) -> [float, float, float]:
 if __name__ == '__main__':
     mln1 = "models\\E-R1.mln"
     mln2 = "models\\E-R2.mln"
+    vertex:int  = 3
+    m = int(vertex*(vertex-1)/2)
+    v1 = [0.5 + 0.5 * i for i in range(2 * m)]
+    v2 = [0.5 + 0.5 * i for i in range(2 * m)]
+
+
+
     w1 = [0.2 + i*0.2 for i in range(20)]
     w2 = [0.2 + i*0.2 for i in range(20)]
-
     combinations = list(itertools.product(w1, w2))
     res = []
     for w in combinations:
