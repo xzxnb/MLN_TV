@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from lib2to3.fixes.fix_input import context
+import math
+# from lib2to3.fixes.fix_input import context
 
+import sympy
 from sampling_fo2.wfomc import standard_wfomc, faster_wfomc, Algo, wfomc
 
 from sampling_fo2.problems import MLNProblem, WFOMCSProblem
@@ -30,6 +32,7 @@ import itertools
 from fractions import Fraction
 import plotly.graph_objects as go
 from sympy import diff, symbols
+# from scipy.optimize import fsolve
 # 导入外部模块中的函数
 def df(f, x):
     ''' Derivative of a given function f(x)
@@ -84,23 +87,30 @@ def edge_weight(mln: str):
         with open(mln, 'r') as f:
             input_content = f.read()
         mln_problem = mln_parse(input_content)
-    weightings: dict[Pred, tuple[Rational, Rational]] = dict()
-    x = symbols('x')
-    sentence = top
-    for weighting, formula in zip(*mln_problem.rules):
-        free_vars = formula.free_vars()
-        if weighting != float('inf'):
-            aux_pred = new_predicate(len(free_vars), '@F')
-            formula = Equivalence(formula, aux_pred(*free_vars))
-            weightings[aux_pred] = (Rational(Fraction(weighting).numerator,
-                                             Fraction(weighting).denominator), Rational(1, 1))
-        # 给free_var加上全称量词
-        for free_var in free_vars:
-            formula = QuantifiedFormula(Universal(free_var), formula)
-        sentence = sentence & formula
-    context = WFOMCSProblem(sentence, mln_problem.domain, weightings, None)
+    wfomcs_problem = MLN_to_WFOMC(mln_problem, '@F')
+    weights = wfomcs_problem.weights
+    preds = weights.keys()
+    syms = create_vars('x0:{}'.format(len(preds)))  # 创建未知数
+    context = WFOMCContext(wfomcs_problem)
     pred2weight = {}
-
+    for sym, pred in zip(syms, preds):
+        pred2weight[pred] = (sym, 1)  # False的weight赋1
+    context.weights.update(pred2weight)
+    Z = standard_wfomc(
+        context.formula, context.domain, context.get_weight
+    )
+    count_dist = {}
+    Z = expand(Z)
+    for degrees, coef in coeff_dict(Z, syms):
+        count_dist[degrees] = coef
+    # f_wight代表未知数为weight下平均边的条数
+    f_wight = 0.0
+    for key in count_dist:
+        counting = 1
+        for i in range(int(key[0])):
+            counting = counting * syms[0]
+        f_wight = f_wight + 0.5 * key[0] * count_dist[key] * counting / Z
+    return [f_wight, syms[0]]
 
 
 
@@ -150,8 +160,8 @@ def count_distribution_(context: WFOMCContext, preds1: list[Pred], preds2: list[
     pred2weight = {}
     pred2sym = {}
     preds = list(set(preds1+preds2))
-    preds3 = [] #指定算哪部分的wmc
-    if mode==1:
+    preds3 = []     #  指定算哪部分的wmc
+    if mode == 1:
         preds3 = preds1
     else:
         preds3 = preds2
@@ -165,11 +175,7 @@ def count_distribution_(context: WFOMCContext, preds1: list[Pred], preds2: list[
         else:
             pred2weight[pred] = (sym, 1)      #preds2的先不管
         pred2sym[pred] = sym
-
     context_c.weights.update(pred2weight)
-
-
-    aa = context_c.weights
 
     if algo == Algo.STANDARD:
         res = standard_wfomc(
@@ -268,7 +274,7 @@ def MLN_TV(mln1: str,mln2: str, w1:float, w2:float) -> [float, float, float]:
         res = res + abs(count_dist4[key] / Z1)
     x = float(round_rational(x))/2
     y = float(round_rational(y))/2
-    res = 0.5*float(round_rational(res))
+    res = 0.5 * float(round_rational(res))
     # return [w1, w2, res]
     return [x, y, res]
 
@@ -276,37 +282,31 @@ def MLN_TV(mln1: str,mln2: str, w1:float, w2:float) -> [float, float, float]:
 if __name__ == '__main__':
     mln1 = "models\\E-R1.mln"
     mln2 = "models\\E-R2.mln"
-    vertex:int  = 3
+    vertex: int = 7
     m = int(vertex*(vertex-1)/2)
     v1 = [0.5 + 0.5 * i for i in range(2 * m)]
-    v2 = [0.5 + 0.5 * i for i in range(2 * m)]
+    v2 = np.linspace(math.ceil(vertex / 2), m, num=2 * m, endpoint=True)
+    w1 = [0 for i in range(2 * m)]
+    w2 = [0 for i in range(2 * m)]
+    [f_weight1, x1] = edge_weight(mln1)
+    [f_weight2, x2] = edge_weight(mln2)
 
+    f_weight1 = sympy.simplify(f_weight1)
+    f_weight2 = sympy.simplify(f_weight2)
 
+    for i in range(2 * m):
+        w1[i] = newton(f_weight1 - v1[i], x1, 1, 0.001, 100)
+        w2[i] = newton(f_weight2 - v2[i], x2, 1, 0.001, 100)
 
-    w1 = [0.2 + i*0.2 for i in range(20)]
-    w2 = [0.2 + i*0.2 for i in range(20)]
     combinations = list(itertools.product(w1, w2))
     res = []
+    # res.append(MLN_TV(mln1, mln2, float(w1[0]), float(w2[0])))
     for w in combinations:
-        res.append(MLN_TV(mln1, mln2, w[0], w[1]))
+        res.append(MLN_TV(mln1, mln2, float(w[0]), float(w[1])))
     for a in res:
         print(res)
     res = np.array(res)
-    # 创建三维图
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111, projection='3d')
-    # # 绘制散点图
-    # ax.scatter(res[:, 0], res[:, 1], res[:, 2], s=100, c=res, cmap='viridis')
-    # # 设置标签
-    # ax.set_xlabel('E-R1')
-    # ax.set_ylabel('E-R2')
-    # ax.set_zlabel('TV')
-    # ax.set_title('0-0.2-4')
-    # fig.write_html("3d_scatter.html")
-    # plt.savefig('TV0_4.png')
-    # # 显示图形
-    # plt.show()
-    # fig = go.Figure(data=[go.Scatter3d(x=res[:, 0], y=res[:, 1], z=res[:, 2], mode='markers')])
+
     fig = go.Figure(data=[go.Scatter3d(
         x=res[:, 0],
         y=res[:, 1],
@@ -325,5 +325,5 @@ if __name__ == '__main__':
                     xaxis_title='E-R1',
                     yaxis_title='E-R2',
                     zaxis_title='TV'))
-    fig.write_html('domain_7.html')
+    fig.write_html('domain_77.html')
     fig.show()
