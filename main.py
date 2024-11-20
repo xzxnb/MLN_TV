@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 # from lib2to3.fixes.fix_input import context
-
+import pandas as pd
 import sympy
 from sampling_fo2.wfomc import standard_wfomc, faster_wfomc, Algo, wfomc
 
@@ -276,7 +276,7 @@ def MLN_TV(mln1: str,mln2: str, w1:float, w2:float) -> [float, float, float]:
     y = float(round_rational(y))/2
     res = 0.5 * float(round_rational(res))
     # return [w1, w2, res]
-    return [x, y, res]
+    return [w1, w2, x, y, res]
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
@@ -301,29 +301,39 @@ if __name__ == '__main__':
     combinations = list(itertools.product(w1, w2))
     res = []
     # res.append(MLN_TV(mln1, mln2, float(w1[0]), float(w2[0])))
+    num = 1
     for w in combinations:
         res.append(MLN_TV(mln1, mln2, float(w[0]), float(w[1])))
-    for a in res:
-        print(res)
+        print(num,"..................................")
+        num = num+1
+
     res = np.array(res)
 
-    fig = go.Figure(data=[go.Scatter3d(
-        x=res[:, 0],
-        y=res[:, 1],
-        z=res[:, 2],
-        mode='markers',
-        marker=dict(
-            size=10,  # 点的大小
-            color=res[:, 2],  # 使用 z 轴的值作为颜色
-            colorscale='Viridis',  # 颜色渐变方案
-            colorbar=dict(title='Z轴值'),  # 添加颜色条
-            showscale=True  # 显示颜色条
-        )
-    )])
-    # 设置图形标题和坐标轴标签
-    fig.update_layout(title='edge-domain7', scene=dict(
-                    xaxis_title='E-R1',
-                    yaxis_title='E-R2',
-                    zaxis_title='TV'))
-    fig.write_html('domain_77.html')
-    fig.show()
+    # 创建列名列表
+    column_names = ["weight1", "weight2", "edge1", "edge2", "TV"]
+
+    # 将数组转换为 DataFrame，并指定列名
+    df = pd.DataFrame(res, columns=column_names)
+
+    # 保存到 Excel 文件
+    df.to_excel('domain7.xlsx', index=False)
+    # fig = go.Figure(data=[go.Scatter3d(
+    #     x=res[:, 0],
+    #     y=res[:, 1],
+    #     z=res[:, 2],
+    #     mode='markers',
+    #     marker=dict(
+    #         size=10,  # 点的大小
+    #         color=res[:, 2],  # 使用 z 轴的值作为颜色
+    #         colorscale='Viridis',  # 颜色渐变方案
+    #         colorbar=dict(title='Z轴值'),  # 添加颜色条
+    #         showscale=True  # 显示颜色条
+    #     )
+    # )])
+    # # 设置图形标题和坐标轴标签
+    # fig.update_layout(title='edge-domain7', scene=dict(
+    #                 xaxis_title='E-R1',
+    #                 yaxis_title='E-R2',
+    #                 zaxis_title='TV'))
+    # fig.write_html('domain_77.html')
+    # fig.show()
