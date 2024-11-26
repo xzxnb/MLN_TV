@@ -82,6 +82,7 @@ def newton(f, x: symbols, x0: int, epsilon, max_iter: int):
     print("Maximum Iterations exceeded. No solutions found.")
     return None
 
+#输入随机图，输出在该随机图下平均边的个数与E(x,y)的权重之间的关系，即f_wight，其中权重syms[0]是自变量
 def edge_weight(mln: str):
     if mln.endswith('.mln'):
         with open(mln, 'r') as f:
@@ -116,7 +117,7 @@ def edge_weight(mln: str):
 
 
 
-# 从mlnproblem构造sentence，如何hard_rule为T，则构造硬约束的非；否则正常构造等价sentence
+# 从mlnproblem构造sentence，如果hard_rule为T，则构造硬约束的非；否则正常构造等价sentence
 def mln_sentence(mln: MLNProblem, hard_rule: bool = True, pred_new: str = AUXILIARY_PRED_NAME):
     weightings: dict[Pred, tuple[Rational, Rational]] = dict()
     if hard_rule:
@@ -147,6 +148,7 @@ def mln_sentence(mln: MLNProblem, hard_rule: bool = True, pred_new: str = AUXILI
             sentence = sentence & formula
     return [sentence, weightings]
 
+# 将两个sentence合并构造WFOMCSProblem，weightings为相应sentence的权重
 def sentence_WFOMCSProblem(sentence1, weightings1, sentence2, weightings2, domain, cardinality_constraint = None):
     sentence = sentence1 & sentence2
     sentence = to_sc2(sentence)
