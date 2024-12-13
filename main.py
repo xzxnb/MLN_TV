@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+import time
 import math
 # from lib2to3.fixes.fix_input import context
 
@@ -22,7 +22,7 @@ from sampling_fo2.context import WFOMCContext
 from sampling_fo2.fol.syntax import Const, Pred, QFFormula, PREDS_FOR_EXISTENTIAL
 
 from sampling_fo2.parser.mln_parser import parse as mln_parse
-from sampling_fo2.problems import WFOMCSProblem, MLN_to_WFOMC
+from sampling_fo2.problems import WFOMCSProblem, MLN_to_WFOMC, MLN_to_WFOMC1
 import copy
 
 import numpy as np
@@ -139,8 +139,9 @@ def mln_sentence(mln: MLNProblem, hard_rule: bool = True, pred_new: str = AUXILI
                 #                                  Fraction(math.exp(weighting)).denominator), Rational(1, 1))
                 # numerator, denominator = float.as_integer_ratio(weighting)
                 # weightings[aux_pred] = (Rational(weighting, 1), Rational(1, 1))
-                weightings[aux_pred] = (Rational(Fraction(weighting).numerator,
-                                                 Fraction(weighting).denominator), Rational(1, 1))
+                # weightings[aux_pred] = (Rational(Fraction(weighting).numerator,
+                #                                  Fraction(weighting).denominator), Rational(1, 1))
+                weightings[aux_pred] = (weighting, Rational(1, 1))
             # 给free_var加上全称量词
             for free_var in free_vars:
                 formula = QuantifiedFormula(Universal(free_var), formula)
@@ -195,7 +196,7 @@ def count_distribution_(context: WFOMCContext, preds1: list[Pred], preds2: list[
     return count_dist
 
 # 输出俩mln的TVdistance和两个mln对应的属性（权重或边平均个数）
-def MLN_TV(mln1: str,mln2: str, w1:float, w2:float) -> [float, float, float]:
+def MLN_TV(mln1: str,mln2: str, w1, w2) -> [float, float, float]:
     if mln1.endswith('.mln'):
         with open(mln1, 'r') as f:
             input_content = f.read()
@@ -206,7 +207,7 @@ def MLN_TV(mln1: str,mln2: str, w1:float, w2:float) -> [float, float, float]:
             continue
         mln_problem1.rules[0][i] = w1
 
-    wfomcs_problem11 = MLN_to_WFOMC(mln_problem1, '@F')
+    wfomcs_problem11 = MLN_to_WFOMC1(mln_problem1, '@F')
     context11 = WFOMCContext(wfomcs_problem11)
 
     if mln2.endswith('.mln'):
@@ -219,15 +220,16 @@ def MLN_TV(mln1: str,mln2: str, w1:float, w2:float) -> [float, float, float]:
             continue
         mln_problem2.rules[0][i] = w2
 
-    wfomcs_problem22 = MLN_to_WFOMC(mln_problem2, '@S')
+    wfomcs_problem22 = MLN_to_WFOMC1(mln_problem2, '@S')
     context22 = WFOMCContext(wfomcs_problem22)
-    Z1 = standard_wfomc(
-        context11.formula, context11.domain, context11.get_weight
-    )
-    Z2 = standard_wfomc(
-        context22.formula, context22.domain, context22.get_weight
-    )
-
+    # Z1 = standard_wfomc(
+    #     context11.formula, context11.domain, context11.get_weight
+    # )
+    # Z2 = standard_wfomc(
+    #     context22.formula, context22.domain, context22.get_weight
+    # )
+    Z1 = wfomc(context11)
+    Z2 = wfomc(context22)
     weights1: dict[Pred, tuple[Rational, Rational]]
     weights1_hard: dict[Pred, tuple[Rational, Rational]]
     weights2: dict[Pred, tuple[Rational, Rational]]
@@ -242,6 +244,7 @@ def MLN_TV(mln1: str,mln2: str, w1:float, w2:float) -> [float, float, float]:
     wfomcs_problem1 = sentence_WFOMCSProblem(sentence1, weights1, sentence2, weights2, domain)
     wfomcs_problem2 = sentence_WFOMCSProblem(sentence1_hard, weights1_hard, sentence2, weights2, domain)
     wfomcs_problem3 = sentence_WFOMCSProblem(sentence1, weights1, sentence2_hard, weights2_hard, domain)
+    print('wfomcs_problem1: ', wfomcs_problem1)
 
     # 分别为包含俩硬约束和只包含其中一个硬约束的情况
     context1 = WFOMCContext(wfomcs_problem1)
@@ -250,7 +253,7 @@ def MLN_TV(mln1: str,mln2: str, w1:float, w2:float) -> [float, float, float]:
 
     count_dist1 = count_distribution_(context1, list(weights1.keys()), list(weights2.keys()), 1)
     count_dist2 = count_distribution_(context1, list(weights1.keys()), list(weights2.keys()), 2)
-
+    print('count_dist1: ',count_dist1)
     res = Rational(0, 1)
     # x, y分别代表两个mln在各自weight下平均边的条数
     x = 0.0
@@ -272,9 +275,10 @@ def MLN_TV(mln1: str,mln2: str, w1:float, w2:float) -> [float, float, float]:
     for key in count_dist4:
         x = x + key[0] * count_dist4[key] / Z1
         res = res + abs(count_dist4[key] / Z1)
-    x = float(round_rational(x))/2
-    y = float(round_rational(y))/2
-    res = 0.5 * float(round_rational(res))
+    res = 0.5*res
+    # x = float(round_rational(x))/2
+    # y = float(round_rational(y))/2
+    # res = 0.5 * float(round_rational(res))
     # return [w1, w2, res]
     return [x, y, res]
 
@@ -282,48 +286,77 @@ def MLN_TV(mln1: str,mln2: str, w1:float, w2:float) -> [float, float, float]:
 if __name__ == '__main__':
     mln1 = "models\\E-R1.mln"
     mln2 = "models\\E-R2.mln"
-    vertex: int = 7
-    m = int(vertex*(vertex-1)/2)
-    v1 = [0.5 + 0.5 * i for i in range(2 * m)]
-    v2 = np.linspace(math.ceil(vertex / 2), m, num=2 * m, endpoint=True)
-    w1 = [0 for i in range(2 * m)]
-    w2 = [0 for i in range(2 * m)]
-    [f_weight1, x1] = edge_weight(mln1)
-    [f_weight2, x2] = edge_weight(mln2)
+    # mln1 = "models\\deskmate.mln"
+    # mln2 = "models\\deskmate.mln"
+    # mln1 = "models\\employment.mln"
+    # mln2 = "models\\employment.mln"
+    # mln1 = "models\\exists-friends-smokes.mln"
+    # mln2 = "models\\exists-friends-smokes.mln"
+    # mln1 = "models\\friends-smokes.mln"
+    # mln2 = "models\\friends-smokes.mln"
+    # mln1 = "models\\weightedcolors.mln"
+    # mln2 = "models\\weightedcolors.mln"
+    # vertex: int = 7
+    # m = int(vertex*(vertex-1)/2)
+    # v1 = [0.5 + 0.5 * i for i in range(2 * m)]
+    # v2 = np.linspace(math.ceil(vertex / 2), m, num=2 * m, endpoint=True)
+    # w1 = [0.5*(i+1) for i in range(3)]
+    # w2 = [0.5*(i+1) for i in range(3)]
+    # [f_weight1, x1] = edge_weight(mln1)
+    # [f_weight2, x2] = edge_weight(mln2)
+    #
+    # f_weight1 = sympy.simplify(f_weight1)
+    # f_weight2 = sympy.simplify(f_weight2)
+    #
+    # for i in range(2 * m):
+    #     w1[i] = newton(f_weight1 - v1[i], x1, 1, 0.001, 100)
+    #     w2[i] = newton(f_weight2 - v2[i], x2, 1, 0.001, 100)
 
-    f_weight1 = sympy.simplify(f_weight1)
-    f_weight2 = sympy.simplify(f_weight2)
-
-    for i in range(2 * m):
-        w1[i] = newton(f_weight1 - v1[i], x1, 1, 0.001, 100)
-        w2[i] = newton(f_weight2 - v2[i], x2, 1, 0.001, 100)
-
-    combinations = list(itertools.product(w1, w2))
-    res = []
+    # combinations = list(itertools.product(w1, w2))
+    # res = []
     # res.append(MLN_TV(mln1, mln2, float(w1[0]), float(w2[0])))
-    for w in combinations:
-        res.append(MLN_TV(mln1, mln2, float(w[0]), float(w[1])))
-    for a in res:
-        print(res)
-    res = np.array(res)
 
-    fig = go.Figure(data=[go.Scatter3d(
-        x=res[:, 0],
-        y=res[:, 1],
-        z=res[:, 2],
-        mode='markers',
-        marker=dict(
-            size=10,  # 点的大小
-            color=res[:, 2],  # 使用 z 轴的值作为颜色
-            colorscale='Viridis',  # 颜色渐变方案
-            colorbar=dict(title='Z轴值'),  # 添加颜色条
-            showscale=True  # 显示颜色条
-        )
-    )])
-    # 设置图形标题和坐标轴标签
-    fig.update_layout(title='edge-domain7', scene=dict(
-                    xaxis_title='E-R1',
-                    yaxis_title='E-R2',
-                    zaxis_title='TV'))
-    fig.write_html('domain_77.html')
-    fig.show()
+    # for w in combinations:
+    #     res.append(MLN_TV(mln1, mln2, float(w[0]), float(w[1])))
+    w1 = create_vars("w1")
+    w2 = create_vars("w2")
+    start_time = time.time()
+    [x, y, res] = MLN_TV(mln1, mln2, w1, w2)
+    end_time = time.time()
+
+    # 计算运行时间
+    execution_time = end_time - start_time
+    print(f"weightedcolors代码运行时间: {execution_time:.6f} 秒")
+    print(res)
+
+    start_time = time.time()
+    result = res.subs({w1: 0.707106757583944, w2: 1.61524607139908})
+    end_time = time.time()
+    execution_time = end_time - start_time
+    # 打印结果
+    print("Result after substitution:", result, "代码运行时间: ", execution_time)
+
+    # for a in res:
+    #     print(res)
+    # res = np.array(res)
+
+    # fig = go.Figure(data=[go.Scatter3d(
+    #     x=res[:, 0],
+    #     y=res[:, 1],
+    #     z=res[:, 2],
+    #     mode='markers',
+    #     marker=dict(
+    #         size=10,  # 点的大小
+    #         color=res[:, 2],  # 使用 z 轴的值作为颜色
+    #         colorscale='Viridis',  # 颜色渐变方案
+    #         colorbar=dict(title='Z轴值'),  # 添加颜色条
+    #         showscale=True  # 显示颜色条
+    #     )
+    # )])
+    # # 设置图形标题和坐标轴标签
+    # fig.update_layout(title='edge-domain7', scene=dict(
+    #                 xaxis_title='E-R1',
+    #                 yaxis_title='E-R2',
+    #                 zaxis_title='TV'))
+    # fig.write_html('domain_77.html')
+    # fig.show()

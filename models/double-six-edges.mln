@@ -1,0 +1,8 @@
+~friends(X,X).
+friends(X,Y) -> friends(Y,X).
+~enemies(X,X).
+enemies(X,Y) -> enemies(Y,X).
+
+person = 10
+|friends| = 6
+|enemies| = 6

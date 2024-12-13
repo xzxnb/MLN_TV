@@ -1,0 +1,4 @@
+~friends(X,X).
+friends(X,Y) -> friends(Y,X).
+
+person = 20

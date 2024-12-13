@@ -1,0 +1,5 @@
+~friends(X,X).
+friends(X,Y) -> friends(Y,X).
+
+|friends| = 6
+person = 10
