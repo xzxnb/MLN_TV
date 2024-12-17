@@ -220,6 +220,7 @@ def MLN_TV(mln1: str,mln2: str, w1, w2) -> [float, float, float]:
             continue
         mln_problem2.rules[0][i] = w2
 
+
     wfomcs_problem22 = MLN_to_WFOMC1(mln_problem2, '@S')
     context22 = WFOMCContext(wfomcs_problem22)
     # Z1 = standard_wfomc(
@@ -228,8 +229,19 @@ def MLN_TV(mln1: str,mln2: str, w1, w2) -> [float, float, float]:
     # Z2 = standard_wfomc(
     #     context22.formula, context22.domain, context22.get_weight
     # )
-    Z1 = wfomc(context11)
-    Z2 = wfomc(context22)
+    Z1,symbol_Z1 = wfomc(context11)
+    Z2,symbol_Z2 = wfomc(context22)
+
+    def decode(poly):
+        poly = expand(poly)
+        coeffs = coeff_dict(poly, self.gen_vars)
+        decode_res = Rational(0, 1)
+        for degrees, coeff in coeffs:
+            if self.valid(degrees):
+                decode_res += coeff
+        return decode_res
+
+
     weights1: dict[Pred, tuple[Rational, Rational]]
     weights1_hard: dict[Pred, tuple[Rational, Rational]]
     weights2: dict[Pred, tuple[Rational, Rational]]
@@ -286,8 +298,10 @@ def MLN_TV(mln1: str,mln2: str, w1, w2) -> [float, float, float]:
 if __name__ == '__main__':
     mln1 = "models\\E-R1.mln"
     mln2 = "models\\E-R2.mln"
-    # mln1 = "models\\deskmate.mln"
-    # mln2 = "models\\deskmate.mln"
+    mln1 = "models\\deskmate.mln"
+    mln2 = "models\\deskmate.mln"
+    mln1 = "models\\k_colored_graph.mln"
+    mln2 = "models\\k_colored_graph.mln"
     # mln1 = "models\\employment.mln"
     # mln2 = "models\\employment.mln"
     # mln1 = "models\\exists-friends-smokes.mln"
@@ -318,6 +332,7 @@ if __name__ == '__main__':
 
     # for w in combinations:
     #     res.append(MLN_TV(mln1, mln2, float(w[0]), float(w[1])))
+    # 注意polinomial.py/coeff_dict函数里的处理
     w1 = create_vars("w1")
     w2 = create_vars("w2")
     start_time = time.time()
