@@ -24,7 +24,7 @@ from sampling_fo2.fol.syntax import Const, Pred, QFFormula, PREDS_FOR_EXISTENTIA
 from sampling_fo2.parser.mln_parser import parse as mln_parse
 from sampling_fo2.problems import WFOMCSProblem, MLN_to_WFOMC, MLN_to_WFOMC1
 import copy
-
+import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -229,18 +229,8 @@ def MLN_TV(mln1: str,mln2: str, w1, w2) -> [float, float, float]:
     # Z2 = standard_wfomc(
     #     context22.formula, context22.domain, context22.get_weight
     # )
-    Z1,symbol_Z1 = wfomc(context11)
-    Z2,symbol_Z2 = wfomc(context22)
-
-    def decode(poly):
-        poly = expand(poly)
-        coeffs = coeff_dict(poly, self.gen_vars)
-        decode_res = Rational(0, 1)
-        for degrees, coeff in coeffs:
-            if self.valid(degrees):
-                decode_res += coeff
-        return decode_res
-
+    Z1, symbol_Z1 = wfomc(context11)
+    Z2, symbol_Z2 = wfomc(context22)
 
     weights1: dict[Pred, tuple[Rational, Rational]]
     weights1_hard: dict[Pred, tuple[Rational, Rational]]
@@ -300,8 +290,8 @@ if __name__ == '__main__':
     mln2 = "models\\E-R2.mln"
     mln1 = "models\\deskmate.mln"
     mln2 = "models\\deskmate.mln"
-    mln1 = "models\\k_colored_graph.mln"
-    mln2 = "models\\k_colored_graph.mln"
+    mln1 = "models\\k_colored_graph_2.mln"
+    mln2 = "models\\k_colored_graph_2.mln"
     # mln1 = "models\\employment.mln"
     # mln2 = "models\\employment.mln"
     # mln1 = "models\\exists-friends-smokes.mln"
@@ -314,8 +304,8 @@ if __name__ == '__main__':
     # m = int(vertex*(vertex-1)/2)
     # v1 = [0.5 + 0.5 * i for i in range(2 * m)]
     # v2 = np.linspace(math.ceil(vertex / 2), m, num=2 * m, endpoint=True)
-    # w1 = [0.5*(i+1) for i in range(3)]
-    # w2 = [0.5*(i+1) for i in range(3)]
+    weight1 = [0.1*(i+1) for i in range(20)]
+    weight2 = [0.1*(i+1) for i in range(20)]
     # [f_weight1, x1] = edge_weight(mln1)
     # [f_weight2, x2] = edge_weight(mln2)
     #
@@ -326,8 +316,8 @@ if __name__ == '__main__':
     #     w1[i] = newton(f_weight1 - v1[i], x1, 1, 0.001, 100)
     #     w2[i] = newton(f_weight2 - v2[i], x2, 1, 0.001, 100)
 
-    # combinations = list(itertools.product(w1, w2))
-    # res = []
+    combinations = list(itertools.product(weight1, weight2))
+    result = []
     # res.append(MLN_TV(mln1, mln2, float(w1[0]), float(w2[0])))
 
     # for w in combinations:
@@ -341,16 +331,20 @@ if __name__ == '__main__':
 
     # 计算运行时间
     execution_time = end_time - start_time
-    print(f"weightedcolors代码运行时间: {execution_time:.6f} 秒")
+    print(f"k_colored_graph_2代码运行时间: {execution_time:.6f} 秒")
     print(res)
 
     start_time = time.time()
-    result = res.subs({w1: 0.707106757583944, w2: 1.61524607139908})
+    for w in combinations:
+        result.append([w[0], w[1], res.subs({w1: w[0], w2: w[1]})])
     end_time = time.time()
     execution_time = end_time - start_time
     # 打印结果
-    print("Result after substitution:", result, "代码运行时间: ", execution_time)
-
+    print("代码运行时间: ", execution_time)
+    # 创建DataFrame，并指定列名
+    df = pd.DataFrame(result, columns=["weight1", "weight2", "TV"])
+    excel_filename = "k_color2_domain10.xlsx"
+    df.to_excel(excel_filename, index=False)
     # for a in res:
     #     print(res)
     # res = np.array(res)
