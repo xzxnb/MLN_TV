@@ -4,6 +4,7 @@ import math
 # from lib2to3.fixes.fix_input import context
 
 import sympy
+
 from sampling_fo2.wfomc import standard_wfomc, faster_wfomc, Algo, wfomc
 
 from sampling_fo2.problems import MLNProblem, WFOMCSProblem
@@ -141,7 +142,7 @@ def mln_sentence(mln: MLNProblem, hard_rule: bool = True, pred_new: str = AUXILI
                 # weightings[aux_pred] = (Rational(weighting, 1), Rational(1, 1))
                 # weightings[aux_pred] = (Rational(Fraction(weighting).numerator,
                 #                                  Fraction(weighting).denominator), Rational(1, 1))
-                weightings[aux_pred] = (weighting, Rational(1, 1))
+                weightings[aux_pred] = (Rational(1, 1), Rational(1, 1))
             # 给free_var加上全称量词
             for free_var in free_vars:
                 formula = QuantifiedFormula(Universal(free_var), formula)
@@ -155,41 +156,43 @@ def sentence_WFOMCSProblem(sentence1, weightings1, sentence2, weightings2, domai
     return WFOMCSProblem(sentence, domain, weightings, cardinality_constraint)
 
 def count_distribution_(context: WFOMCContext, preds1: list[Pred], preds2: list[Pred], mode: int,
-                       algo: Algo = Algo.STANDARD) \
+                       algo: Algo = Algo.FASTERv2) \
         -> dict[tuple[int, ...], Rational]:
-    context_c = copy.deepcopy(context)
-    pred2weight = {}
+    #pred2weight = {}
     pred2sym = {}
-    preds = list(set(preds1+preds2))
+    preds = preds1+preds2
     preds3 = []     #  指定算哪部分的wmc
-    if mode == 1:
-        preds3 = preds1
-    else:
-        preds3 = preds2
+    # if mode == 1:
+    #     preds3 = preds1
+    # else:
+    #     preds3 = preds2
     syms = create_vars('x0:{}'.format(len(preds)))#创建未知数
     for sym, pred in zip(syms, preds):
-        if pred in pred2weight:
-            continue
-        weight = context_c.get_weight(pred)
-        if pred in preds3:
-            pred2weight[pred] = (weight[0] * sym, 1)#False的weight赋1
-        else:
-            pred2weight[pred] = (sym, 1)      #preds2的先不管
+        #if pred in pred2weight:
+        #    continue
         pred2sym[pred] = sym
-    context_c.weights.update(pred2weight)
+        #pred2weight[pred] = context.get_weight(pred)
+        #pred2weight[pred][0] = pred2weight[pred][0] * sym
+    # context.weights.update(pred2weight)
+
+    def get_weight(pred):
+        if pred not in pred2sym.keys():
+            return context.get_weight(pred)
+        return context.get_weight(pred)[0]*pred2sym[pred], context.get_weight(pred)[1]
 
     if algo == Algo.STANDARD:
         res = standard_wfomc(
-            context_c.formula, context_c.domain, context_c.get_weight
+            context.formula, context.domain, get_weight
         )
-    elif algo == Algo.FASTER:
+    elif algo == Algo.FASTERv2:
         res = faster_wfomc(
-            context_c.formula, context_c.domain, context_c.get_weight
+            context.formula, context.domain, get_weight, True
         )
     symbols = [pred2sym[pred] for pred in preds]
     count_dist = {}
     res = expand(res)
-    if context_c.decode_result(res) == 0:
+    # print(res)
+    if context.decode_result(res) == 0:
         return {(0, 0): Rational(0, 1)}
     for degrees, coef in coeff_dict(res, symbols):
         count_dist[degrees] = coef
@@ -220,7 +223,6 @@ def MLN_TV(mln1: str,mln2: str, w1, w2) -> [float, float, float]:
             continue
         mln_problem2.rules[0][i] = w2
 
-
     wfomcs_problem22 = MLN_to_WFOMC1(mln_problem2, '@S')
     context22 = WFOMCContext(wfomcs_problem22)
     # Z1 = standard_wfomc(
@@ -229,8 +231,8 @@ def MLN_TV(mln1: str,mln2: str, w1, w2) -> [float, float, float]:
     # Z2 = standard_wfomc(
     #     context22.formula, context22.domain, context22.get_weight
     # )
-    Z1, symbol_Z1 = wfomc(context11)
-    Z2, symbol_Z2 = wfomc(context22)
+    Z1 = wfomc(context11, Algo.FASTERv2)
+    Z2 = wfomc(context22, Algo.FASTERv2)
 
     weights1: dict[Pred, tuple[Rational, Rational]]
     weights1_hard: dict[Pred, tuple[Rational, Rational]]
@@ -254,29 +256,30 @@ def MLN_TV(mln1: str,mln2: str, w1, w2) -> [float, float, float]:
     context3 = WFOMCContext(wfomcs_problem3)
 
     count_dist1 = count_distribution_(context1, list(weights1.keys()), list(weights2.keys()), 1)
-    count_dist2 = count_distribution_(context1, list(weights1.keys()), list(weights2.keys()), 2)
-    print('count_dist1: ',count_dist1)
+    # count_dist2 = count_distribution_(context1, list(weights1.keys()), list(weights2.keys()), 2)
+    print('count_dist1: ', count_dist1)
     res = Rational(0, 1)
     # x, y分别代表两个mln在各自weight下平均边的条数
     x = 0.0
     y = 0.0
     # 同时满足第一个mln和第二个mln硬约束的情况
     for key in count_dist1:
-        x = x + key[0]*count_dist1[key] / Z1
-        y = y + key[1]*count_dist2[key] / Z2
-        res = res + abs(count_dist1[key] / Z1 - count_dist2[key] / Z2)
+        w = w1**key[0]/Z1 - w2**key[1]/Z2
+        # x = key[0]*count_dist1[key] / Z1
+        # y = y + key[1]*count_dist2[key] / Z2
+        res = res + abs(w * count_dist1[key])
 
-    # 不满足第一个mln的硬约束加上第二个mln
-    count_dist3 = count_distribution_(context2, list(weights1_hard.keys()), list(weights2.keys()), 2)
-    for key in count_dist3:
-        y = y + key[1]*count_dist3[key] / Z2
-        res = res + abs(count_dist3[key] / Z2)
-
-    # 不满足第二个mln的硬约束加上第一个mln
-    count_dist4 = count_distribution_(context3, list(weights1.keys()), list(weights2_hard.keys()), 1)
-    for key in count_dist4:
-        x = x + key[0] * count_dist4[key] / Z1
-        res = res + abs(count_dist4[key] / Z1)
+    # # 不满足第一个mln的硬约束加上第二个mln
+    # count_dist3 = count_distribution_(context2, list(weights1_hard.keys()), list(weights2.keys()), 2)
+    # for key in count_dist3:
+    #     y = y + key[1]*count_dist3[key] / Z2
+    #     res = res + abs(count_dist3[key] / Z2)
+    #
+    # # 不满足第二个mln的硬约束加上第一个mln
+    # count_dist4 = count_distribution_(context3, list(weights1.keys()), list(weights2_hard.keys()), 1)
+    # for key in count_dist4:
+    #     x = x + key[0] * count_dist4[key] / Z1
+    #     res = res + abs(count_dist4[key] / Z1)
     res = 0.5*res
     # x = float(round_rational(x))/2
     # y = float(round_rational(y))/2
@@ -290,8 +293,8 @@ if __name__ == '__main__':
     mln2 = "models\\E-R2.mln"
     mln1 = "models\\deskmate.mln"
     mln2 = "models\\deskmate.mln"
-    mln1 = "models\\k_colored_graph_2.mln"
-    mln2 = "models\\k_colored_graph_2.mln"
+    mln1 = "models\\k_colored_graph_3.mln"
+    mln2 = "models\\k_colored_graph_3.mln"
     # mln1 = "models\\employment.mln"
     # mln2 = "models\\employment.mln"
     # mln1 = "models\\exists-friends-smokes.mln"
@@ -331,8 +334,8 @@ if __name__ == '__main__':
 
     # 计算运行时间
     execution_time = end_time - start_time
-    print(f"k_colored_graph_2代码运行时间: {execution_time:.6f} 秒")
-    print(res)
+    print(f"k_colored_graph_1代码运行时间: {execution_time:.6f} 秒")
+    # print(res)
 
     start_time = time.time()
     for w in combinations:
@@ -343,7 +346,7 @@ if __name__ == '__main__':
     print("代码运行时间: ", execution_time)
     # 创建DataFrame，并指定列名
     df = pd.DataFrame(result, columns=["weight1", "weight2", "TV"])
-    excel_filename = "k_color2_domain10.xlsx"
+    excel_filename = "k_color3_domain6_fast.xlsx"
     df.to_excel(excel_filename, index=False)
     # for a in res:
     #     print(res)
