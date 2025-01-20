@@ -272,13 +272,13 @@ def MLN_TV(mln1: str,mln2: str, w1, w2) -> [float, float, float]:
     # # 不满足第一个mln的硬约束加上第二个mln
     # count_dist3 = count_distribution_(context2, list(weights1_hard.keys()), list(weights2.keys()), 2)
     # for key in count_dist3:
-    #     y = y + key[1]*count_dist3[key] / Z2
+    #     y = y + w2**key[1]*count_dist3[key] / Z2
     #     res = res + abs(count_dist3[key] / Z2)
     #
     # # 不满足第二个mln的硬约束加上第一个mln
     # count_dist4 = count_distribution_(context3, list(weights1.keys()), list(weights2_hard.keys()), 1)
     # for key in count_dist4:
-    #     x = x + key[0] * count_dist4[key] / Z1
+    #     x = x + w1**key[0] * count_dist4[key] / Z1
     #     res = res + abs(count_dist4[key] / Z1)
     res = 0.5*res
     # x = float(round_rational(x))/2
@@ -286,15 +286,44 @@ def MLN_TV(mln1: str,mln2: str, w1, w2) -> [float, float, float]:
     # res = 0.5 * float(round_rational(res))
     # return [w1, w2, res]
     return [x, y, res]
+def MLN_TV2(mln1: str,mln2: str):
+    if mln1.endswith('.mln'):
+        with open(mln1, 'r') as f:
+            input_content = f.read()
+        mln_problem1 = mln_parse(input_content)
+    wfomcs_problem11 = MLN_to_WFOMC(mln_problem1)
+    # context11 = WFOMCContext(wfomcs_problem11)
+
+    if mln2.endswith('.mln'):
+        with open(mln2, 'r') as f:
+            input_content = f.read()
+        mln_problem2 = mln_parse(input_content)
+    wfomcs_problem22 = MLN_to_WFOMC(mln_problem2)
+    # context22 = WFOMCContext(wfomcs_problem22)
+
+    Z1 = wfomc(wfomcs_problem11, Algo.FASTERv2)
+    Z2 = wfomc(wfomcs_problem22, Algo.FASTERv2)
+
+    ma = max(Z1, Z2)
+    mi = min(Z1, Z2)
+    if mi != 0:
+        TV = 0.5*(mi*(1/mi - 1/ma)+(ma-mi)/ma)
+    elif mi == 0 and ma != 0:
+        TV = 1
+    else:
+        TV = 0
+    return float(TV)
+
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    mln1 = "models\\E-R1.mln"
-    mln2 = "models\\E-R2.mln"
-    mln1 = "models\\deskmate.mln"
-    mln2 = "models\\deskmate.mln"
+    # mln1 = "models\\E-R1.mln"
+    # mln2 = "models\\E-R2.mln"
+    # mln1 = "models\\deskmate.mln"
+    # mln2 = "models\\deskmate.mln"
     mln1 = "models\\k_colored_graph_3.mln"
-    mln2 = "models\\k_colored_graph_3.mln"
+    mln2 = "models\\k_colored_graph_3.1.mln"
+
     # mln1 = "models\\employment.mln"
     # mln2 = "models\\employment.mln"
     # mln1 = "models\\exists-friends-smokes.mln"
@@ -303,12 +332,12 @@ if __name__ == '__main__':
     # mln2 = "models\\friends-smokes.mln"
     # mln1 = "models\\weightedcolors.mln"
     # mln2 = "models\\weightedcolors.mln"
-    # vertex: int = 7
-    # m = int(vertex*(vertex-1)/2)
+    vertex = 20
+    m = math.floor(vertex/3)*math.ceil(vertex/3)+1
     # v1 = [0.5 + 0.5 * i for i in range(2 * m)]
     # v2 = np.linspace(math.ceil(vertex / 2), m, num=2 * m, endpoint=True)
-    weight1 = [0.1*(i+1) for i in range(20)]
-    weight2 = [0.1*(i+1) for i in range(20)]
+    # weight1 = [0.1*(i+1) for i in range(20)]
+    # weight2 = [0.1*(i+1) for i in range(20)]
     # [f_weight1, x1] = edge_weight(mln1)
     # [f_weight2, x2] = edge_weight(mln2)
     #
@@ -319,38 +348,63 @@ if __name__ == '__main__':
     #     w1[i] = newton(f_weight1 - v1[i], x1, 1, 0.001, 100)
     #     w2[i] = newton(f_weight2 - v2[i], x2, 1, 0.001, 100)
 
-    combinations = list(itertools.product(weight1, weight2))
+    # combinations = list(itertools.product(weight1, weight2))
     result = []
     # res.append(MLN_TV(mln1, mln2, float(w1[0]), float(w2[0])))
 
     # for w in combinations:
     #     res.append(MLN_TV(mln1, mln2, float(w[0]), float(w[1])))
     # 注意polinomial.py/coeff_dict函数里的处理
-    w1 = create_vars("w1")
-    w2 = create_vars("w2")
-    start_time = time.time()
-    [x, y, res] = MLN_TV(mln1, mln2, w1, w2)
-    end_time = time.time()
+    # w1 = create_vars("w1")
+    # w2 = create_vars("w2")
+    last_w1 = '0'
+    last_w2 = '0'
+    for i in range(0, m+1):
+        result.append([i, i, 0])
+        with open(mln1, 'r', encoding='utf-8') as file:
+            lines = file.readlines()
+        lines[9] = lines[9].replace(last_w1, str(i), 1)
+        lines[10] = lines[10].replace(last_w1, str(i), 1)
+        lines[11] = lines[11].replace(last_w1, str(i), 1)
+        with open(mln1, 'w', encoding='utf-8') as file:
+            file.writelines(lines)
+        for j in range(i+1, m+1):
+            with open(mln2, 'r', encoding='utf-8') as file:
+                lines = file.readlines()
+            lines[9] = lines[9].replace(last_w2, str(j), 1)
+            lines[10] = lines[10].replace(last_w2, str(j), 1)
+            lines[11] = lines[11].replace(last_w2, str(j), 1)
+            with open(mln2, 'w', encoding='utf-8') as file:
+                file.writelines(lines)
+            res = MLN_TV2(mln1, mln2)
+            result.append([i, j, res])
+            result.append([j, i, res])
+            last_w1 = str(i)
+            last_w2 = str(j)
 
-    # 计算运行时间
-    execution_time = end_time - start_time
-    print(f"k_colored_graph_1代码运行时间: {execution_time:.6f} 秒")
-    # print(res)
 
-    start_time = time.time()
-    for w in combinations:
-        result.append([w[0], w[1], res.subs({w1: w[0], w2: w[1]})])
-    end_time = time.time()
-    execution_time = end_time - start_time
-    # 打印结果
-    print("代码运行时间: ", execution_time)
+    # start_time = time.time()
+    # [x, y, res] = MLN_TV(mln1, mln2, w1, w2)
+    # end_time = time.time()
+    #
+    # # 计算运行时间
+    # execution_time = end_time - start_time
+    # print(f"k_colored_graph_1代码运行时间: {execution_time:.6f} 秒")
+    # # print(res)
+    #
+    # start_time = time.time()
+    # for w in combinations:
+    #     result.append([w[0], w[1], res.subs({w1: w[0], w2: w[1]})])
+    # end_time = time.time()
+    # execution_time = end_time - start_time
+    # # 打印结果
+    # print("代码运行时间: ", execution_time)
+
     # 创建DataFrame，并指定列名
-    df = pd.DataFrame(result, columns=["weight1", "weight2", "TV"])
-    excel_filename = "k_color3_domain6_fast.xlsx"
+    df = pd.DataFrame(result, columns=["m1", "m2", "TV"])
+    excel_filename = "k_color3_domain20_fast.xlsx"
     df.to_excel(excel_filename, index=False)
-    # for a in res:
-    #     print(res)
-    # res = np.array(res)
+
 
     # fig = go.Figure(data=[go.Scatter3d(
     #     x=res[:, 0],

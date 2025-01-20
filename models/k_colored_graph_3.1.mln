@@ -7,7 +7,7 @@ red_blue(X,Y) <-> edge(X,Y) & red(X) & blue(Y).
 red_green(X,Y) <-> edge(X,Y) & red(X) & green(Y).
 green_blue(X,Y) <-> edge(X,Y) & green(X) & blue(Y).
 V = 20
-|red_blue| >= m2
-|red_green| >= m2
-|green_blue| >= m2
+|red_blue| >= m1
+|red_green| >= m1
+|green_blue| >= m1
 
