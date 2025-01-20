@@ -1,0 +1,14 @@
+domain = 5
+deskmate代码运行时间: 3.512790 秒
+employment代码运行时间: 1.002631 秒
+exists-friends-smokes代码运行时间:0.607346秒
+friends-smokes代码运行时间: 0.419558 秒
+weightedcolors代码运行时间:0.727761 秒
+
+
+domain = 6
+deskmate代码运行时间: 10.818734 秒
+employment代码运行时间: 2.241113 秒
+exists-friends-smokes代码运行时间: 0.775190 秒
+friends-smokes代码运行时间: 0.355107 秒
+weightedcolors代码运行时间: 0.715457 秒

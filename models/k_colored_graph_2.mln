@@ -1,0 +1,6 @@
+~edge(X,X).
+edge(X,Y) -> edge(Y,X).
+1.3 \exists Y: (edge(X,Y) & blue(Y))
+(red(X) & ~blue(X) & ~green(X)) | (~red(X) & blue(X) & ~green(X)) | (~red(X) & ~blue(X) & green(X)).
+
+V = 20

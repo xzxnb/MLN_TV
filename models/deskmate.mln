@@ -1,0 +1,9 @@
+~mate(X,X) & ~friends(X,X).
+mate(X,Y) -> mate(Y,X).
+friends(X,Y) -> friends(Y,X).
+\exists Y: (mate(X,Y)).
+\exists X: (mate(X,Y)).
+1 mate(X,Y) -> friends(X,Y)
+
+students = 6
+|mate| = 6
