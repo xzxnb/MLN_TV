@@ -30,7 +30,7 @@ import plotly.graph_objects as go
 from sympy import diff, symbols
 # from scipy.optimize import fsolve
 from main import mln_sentence, sentence_WFOMCSProblem, count_distribution_
-def MLN_TV(mln1: str,mln2: str, w1) -> [float, float, float]:
+def MLN_TV(mln1: str,mln2: str, w1, w2, w3, w4, w5) -> [float, float, float]:
     if mln1.endswith('.mln'):
         with open(mln1, 'r') as f:
             input_content = f.read()
@@ -41,6 +41,10 @@ def MLN_TV(mln1: str,mln2: str, w1) -> [float, float, float]:
             continue
         if mln_problem1.rules[0][i] == 0:
             mln_problem1.rules[0][i] = w1
+        elif mln_problem1.rules[0][i] == 1:
+            mln_problem1.rules[0][i] = w2
+        else:
+            mln_problem1.rules[0][i] = w3
 
     wfomcs_problem11 = MLN_to_WFOMC1(mln_problem1, '@F')
     context11 = WFOMCContext(wfomcs_problem11)
@@ -49,6 +53,13 @@ def MLN_TV(mln1: str,mln2: str, w1) -> [float, float, float]:
         with open(mln2, 'r') as f:
             input_content = f.read()
         mln_problem2 = mln_parse(input_content)
+    for i in range(len(mln_problem2.rules[1])):
+        if mln_problem2.rules[0][i] == float('inf'):
+            continue
+        if mln_problem2.rules[0][i] == 1:
+            mln_problem2.rules[0][i] = w4
+        else:
+            mln_problem2.rules[0][i] = w5
 
     wfomcs_problem22 = MLN_to_WFOMC1(mln_problem2, '@S')
     context22 = WFOMCContext(wfomcs_problem22)
@@ -113,8 +124,12 @@ if __name__ == '__main__':
     mln2 = "models\\fr-sm-dr2.mln"
     weight1 = [0.1*(i+1) for i in range(20)]
     w1 = create_vars("w1")
+    w2 = create_vars("w2")
+    w3 = create_vars("w3")
+    w4 = create_vars("w4")
+    w5 = create_vars("w5")
     start_time = time.time()
-    [x, y, res] = MLN_TV(mln1, mln2, w1, w2)
+    [x, y, res] = MLN_TV(mln1, mln2, w1, w2, w3, w4, w5)
     end_time = time.time()
 
     # 计算运行时间

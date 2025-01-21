@@ -1,0 +1,12 @@
+domain =5
+Deskmate code runtime: 3.512790 seconds
+Employment code runtime: 1.002631 seconds
+Existence friends cakes code runtime: 0.607346 seconds
+Friends cakes code runtime: 0.419558 seconds
+Weighted colors code runtime: 0.727761 seconds
+domain =6
+Deskmate code runtime: 10.818734 seconds
+Employment code runtime: 2.241113 seconds
+Exists friends smokers code runtime: 0.775190 seconds
+Friends cakes code runtime: 0.355107 seconds
+Weighted colors code runtime: 0.715457 seconds
