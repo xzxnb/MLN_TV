@@ -1,5 +1,5 @@
 ~fr(X,X).
-w fr(X,Y) -> fr(Y,X)
+0 fr(X,Y) -> fr(Y,X)
 2 sm(X) & fr(X,Y) -> sm(Y)
 2 dr(X) & fr(X,Y) -> dr(Y)
 1 sm(X) -> dr(X)
@@ -10,6 +10,6 @@ w fr(X,Y) -> fr(Y,X)
 # write a hard rule by the same syntax as a WFOMC sentence
 # \forall X: (\exists Y: (friends(X,Y))).
 
-vertices = 7
+vertices = 8
 # optional cardinality constraint
 # |smokes| = 1

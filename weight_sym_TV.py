@@ -41,7 +41,7 @@ def MLN_TV(mln1: str,mln2: str, w1, w2, w3, w4, w5) -> [float, float, float]:
             continue
         if mln_problem1.rules[0][i] == 0:
             mln_problem1.rules[0][i] = w1
-        elif mln_problem1.rules[0][i] == 1:
+        elif mln_problem1.rules[0][i] == 2:
             mln_problem1.rules[0][i] = w2
         else:
             mln_problem1.rules[0][i] = w3
@@ -56,7 +56,7 @@ def MLN_TV(mln1: str,mln2: str, w1, w2, w3, w4, w5) -> [float, float, float]:
     for i in range(len(mln_problem2.rules[1])):
         if mln_problem2.rules[0][i] == float('inf'):
             continue
-        if mln_problem2.rules[0][i] == 1:
+        if mln_problem2.rules[0][i] == 2:
             mln_problem2.rules[0][i] = w4
         else:
             mln_problem2.rules[0][i] = w5
@@ -97,7 +97,7 @@ def MLN_TV(mln1: str,mln2: str, w1, w2, w3, w4, w5) -> [float, float, float]:
     y = 0.0
     # 同时满足第一个mln和第二个mln硬约束的情况
     for key in count_dist1:
-        w = w1**key[0]/Z1 - w2**key[1]/Z2
+        w = w1**key[0]*w2**key[1]*w2**key[2]*w3**key[3]*w3**key[4]/Z1 - w4**key[5]*w4**key[6]*w5**key[7]*w5**key[8]/Z2
         # x = key[0]*count_dist1[key] / Z1
         # y = y + key[1]*count_dist2[key] / Z2
         res = res + abs(w * count_dist1[key])
@@ -108,43 +108,47 @@ def MLN_TV(mln1: str,mln2: str, w1, w2, w3, w4, w5) -> [float, float, float]:
     #     y = y + w2**key[1]*count_dist3[key] / Z2
     #     res = res + abs(count_dist3[key] / Z2)
     #
-    # # 不满足第二个mln的硬约束加上第一个mln
-    # count_dist4 = count_distribution_(context3, list(weights1.keys()), list(weights2_hard.keys()), 1)
-    # for key in count_dist4:
-    #     x = x + w1**key[0] * count_dist4[key] / Z1
-    #     res = res + abs(count_dist4[key] / Z1)
+    # 不满足第二个mln的硬约束加上第一个mln
+    count_dist4 = count_distribution_(context3, list(weights1.keys()), list(weights2_hard.keys()), 1)
+    for key in count_dist4:
+        # x = x + w1**key[0] * count_dist4[key] / Z1
+        # res = res + abs(count_dist4[key] / Z1)
+        w = w1 ** key[0] * w2 ** key[1] * w2 ** key[2] * w3**key[3] * w3**key[4] / Z1
+        res = res + abs(w * count_dist4[key])
     res = 0.5*res
     # x = float(round_rational(x))/2
     # y = float(round_rational(y))/2
     # res = 0.5 * float(round_rational(res))
     # return [w1, w2, res]
-    return [x, y, res]
+    return res
 if __name__ == '__main__':
     mln1 = "models\\fr-sm-dr1.mln"
     mln2 = "models\\fr-sm-dr2.mln"
-    weight1 = [0.1*(i+1) for i in range(20)]
+    weight1 = [0.4*(i+1) for i in range(200)]
     w1 = create_vars("w1")
     w2 = create_vars("w2")
     w3 = create_vars("w3")
     w4 = create_vars("w4")
     w5 = create_vars("w5")
     start_time = time.time()
-    [x, y, res] = MLN_TV(mln1, mln2, w1, w2, w3, w4, w5)
+    res = MLN_TV(mln1, mln2, w1, w2, w3, w4, w5)
     end_time = time.time()
 
     # 计算运行时间
     execution_time = end_time - start_time
     print(f"k_colored_graph_1代码运行时间: {execution_time:.6f} 秒")
     # print(res)
-
+    result = []
     start_time = time.time()
-    for w in combinations:
-        result.append([w[0], w[1], res.subs({w1: w[0], w2: w[1]})])
+    for w in weight1:
+        result.append([w, res.subs({w1: w, w2: 2, w3: 1, w4: 2, w5: 1})])
     end_time = time.time()
     execution_time = end_time - start_time
     # 打印结果
     print("代码运行时间: ", execution_time)
-
+    df = pd.DataFrame(result, columns=["weight", "TV"])
+    excel_filename = "fr-sm-dr_domain8.xlsx"
+    df.to_excel(excel_filename, index=False)
 
 
 

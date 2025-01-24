@@ -6,8 +6,8 @@ edge(X,Y) -> ~(red(X) & red(Y)) & ~(blue(X) & blue(Y)) & ~(green(X) & green(Y)).
 red_blue(X,Y) <-> edge(X,Y) & red(X) & blue(Y).
 red_green(X,Y) <-> edge(X,Y) & red(X) & green(Y).
 green_blue(X,Y) <-> edge(X,Y) & green(X) & blue(Y).
-V = 20
-|red_blue| >= m2
-|red_green| >= m2
-|green_blue| >= m2
+V = 0
+|red_blue| >= 0
+|red_green| >= 0
+|green_blue| >= 0
 
