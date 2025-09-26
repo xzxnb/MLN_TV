@@ -156,7 +156,7 @@ def sentence_WFOMCSProblem(sentence1, weightings1, sentence2, weightings2, domai
     return WFOMCSProblem(sentence, domain, weightings, cardinality_constraint)
 
 def count_distribution_(context: WFOMCContext, preds1: list[Pred], preds2: list[Pred], mode: int,
-                       algo: Algo = Algo.FASTERv2) \
+                       algo: Algo = Algo.STANDARD) \
         -> dict[tuple[int, ...], Rational]:
     #pred2weight = {}
     pred2sym = {}
@@ -199,7 +199,7 @@ def count_distribution_(context: WFOMCContext, preds1: list[Pred], preds2: list[
     return count_dist
 
 # 输出俩mln的TVdistance和两个mln对应的属性（权重或边平均个数）
-def MLN_TV(mln1: str,mln2: str, w1, w2) -> [float, float, float]:
+def MLN_TV(mln1: str,mln2: str, w1, w2) :
     if mln1.endswith('.mln'):
         with open(mln1, 'r') as f:
             input_content = f.read()
@@ -231,8 +231,8 @@ def MLN_TV(mln1: str,mln2: str, w1, w2) -> [float, float, float]:
     # Z2 = standard_wfomc(
     #     context22.formula, context22.domain, context22.get_weight
     # )
-    Z1 = wfomc(context11, Algo.FASTERv2)
-    Z2 = wfomc(context22, Algo.FASTERv2)
+    Z1 = wfomc(context11, Algo.STANDARD)
+    Z2 = wfomc(context22, Algo.STANDARD)
 
     weights1: dict[Pred, tuple[Rational, Rational]]
     weights1_hard: dict[Pred, tuple[Rational, Rational]]
@@ -272,12 +272,16 @@ def MLN_TV(mln1: str,mln2: str, w1, w2) -> [float, float, float]:
     # # 不满足第一个mln的硬约束加上第二个mln
     # count_dist3 = count_distribution_(context2, list(weights1_hard.keys()), list(weights2.keys()), 2)
     # for key in count_dist3:
+    #     w = w2**key[0]/Z2
+    #     res = res + abs(w * count_dist3[key])
     #     y = y + w2**key[1]*count_dist3[key] / Z2
     #     res = res + abs(count_dist3[key] / Z2)
     #
     # # 不满足第二个mln的硬约束加上第一个mln
     # count_dist4 = count_distribution_(context3, list(weights1.keys()), list(weights2_hard.keys()), 1)
     # for key in count_dist4:
+    #     w = w1**key[0]/Z1
+    #     res = res + abs(w * count_dist4[key])
     #     x = x + w1**key[0] * count_dist4[key] / Z1
     #     res = res + abs(count_dist4[key] / Z1)
     res = 0.5*res
@@ -301,8 +305,8 @@ def MLN_TV2(mln1: str,mln2: str):
     wfomcs_problem22 = MLN_to_WFOMC(mln_problem2)
     # context22 = WFOMCContext(wfomcs_problem22)
 
-    Z1 = wfomc(wfomcs_problem11, Algo.FASTERv2)
-    Z2 = wfomc(wfomcs_problem22, Algo.FASTERv2)
+    Z1 = wfomc(wfomcs_problem11, Algo.STANDARD)
+    Z2 = wfomc(wfomcs_problem22, Algo.STANDARD)
 
     ma = max(Z1, Z2)
     mi = min(Z1, Z2)
@@ -315,114 +319,158 @@ def MLN_TV2(mln1: str,mln2: str):
     return float(TV)
 
 
-# Press the green button in the gutter to run the script.
+# color1和weight和TV关系代码
 if __name__ == '__main__':
-    # mln1 = "models\\E-R1.mln"
-    # mln2 = "models\\E-R2.mln"
-    # mln1 = "models\\deskmate.mln"
-    # mln2 = "models\\deskmate.mln"
-    mln1 = "models\\k_colored_graph_3.mln"
-    mln2 = "models\\k_colored_graph_3.1.mln"
 
-    # mln1 = "models\\employment.mln"
-    # mln2 = "models\\employment.mln"
-    # mln1 = "models\\exists-friends-smokes.mln"
-    # mln2 = "models\\exists-friends-smokes.mln"
-    # mln1 = "models\\friends-smokes.mln"
-    # mln2 = "models\\friends-smokes.mln"
-    # mln1 = "models\\weightedcolors.mln"
-    # mln2 = "models\\weightedcolors.mln"
-    vertex = 20
-    m = math.floor(vertex/3)*math.ceil(vertex/3)+1
-    # v1 = [0.5 + 0.5 * i for i in range(2 * m)]
-    # v2 = np.linspace(math.ceil(vertex / 2), m, num=2 * m, endpoint=True)
-    # weight1 = [0.1*(i+1) for i in range(20)]
-    # weight2 = [0.1*(i+1) for i in range(20)]
-    # [f_weight1, x1] = edge_weight(mln1)
-    # [f_weight2, x2] = edge_weight(mln2)
-    #
-    # f_weight1 = sympy.simplify(f_weight1)
-    # f_weight2 = sympy.simplify(f_weight2)
-    #
-    # for i in range(2 * m):
-    #     w1[i] = newton(f_weight1 - v1[i], x1, 1, 0.001, 100)
-    #     w2[i] = newton(f_weight2 - v2[i], x2, 1, 0.001, 100)
+    mln1 = "models\\k_colored_graph_1.mln"
+    mln2 = "models\\k_colored_graph_1.mln"
 
-    # combinations = list(itertools.product(weight1, weight2))
+    weight1 = [0.01*(i+1) for i in range(100)]
+    weight2 = [0.01*(i+1) for i in range(100)]
+
+
+
+    combinations = list(itertools.product(weight1, weight2))
     result = []
-    # res.append(MLN_TV(mln1, mln2, float(w1[0]), float(w2[0])))
 
-    # for w in combinations:
-    #     res.append(MLN_TV(mln1, mln2, float(w[0]), float(w[1])))
-    # 注意polinomial.py/coeff_dict函数里的处理
-    # w1 = create_vars("w1")
-    # w2 = create_vars("w2")
-    last_w1 = '0'
-    last_w2 = '0'
-    for i in range(0, m+1):
-        result.append([i, i, 0])
-        with open(mln1, 'r', encoding='utf-8') as file:
-            lines = file.readlines()
-        lines[9] = lines[9].replace(last_w1, str(i), 1)
-        lines[10] = lines[10].replace(last_w1, str(i), 1)
-        lines[11] = lines[11].replace(last_w1, str(i), 1)
-        with open(mln1, 'w', encoding='utf-8') as file:
-            file.writelines(lines)
-        for j in range(i+1, m+1):
-            with open(mln2, 'r', encoding='utf-8') as file:
-                lines = file.readlines()
-            lines[9] = lines[9].replace(last_w2, str(j), 1)
-            lines[10] = lines[10].replace(last_w2, str(j), 1)
-            lines[11] = lines[11].replace(last_w2, str(j), 1)
-            with open(mln2, 'w', encoding='utf-8') as file:
-                file.writelines(lines)
-            res = MLN_TV2(mln1, mln2)
-            result.append([i, j, res])
-            result.append([j, i, res])
-            last_w1 = str(i)
-            last_w2 = str(j)
+    w1 = create_vars("w1")
+    w2 = create_vars("w2")
 
+    start_time = time.time()
+    [x, y, res] = MLN_TV(mln1, mln2, w1, w2)
+    end_time = time.time()
 
-    # start_time = time.time()
-    # [x, y, res] = MLN_TV(mln1, mln2, w1, w2)
-    # end_time = time.time()
-    #
-    # # 计算运行时间
-    # execution_time = end_time - start_time
-    # print(f"k_colored_graph_1代码运行时间: {execution_time:.6f} 秒")
-    # # print(res)
-    #
-    # start_time = time.time()
-    # for w in combinations:
-    #     result.append([w[0], w[1], res.subs({w1: w[0], w2: w[1]})])
-    # end_time = time.time()
-    # execution_time = end_time - start_time
-    # # 打印结果
-    # print("代码运行时间: ", execution_time)
+    # 计算运行时间
+    execution_time = end_time - start_time
+    print(f"k_colored_graph_1代码运行时间: {execution_time:.6f} 秒")
+    # print(res)
+
+    start_time = time.time()
+    for w in combinations:
+        result.append([w[0], w[1], res.subs({w1: w[0], w2: w[1]})])
+    end_time = time.time()
+    execution_time = end_time - start_time
+    # 打印结果
+    print("代码运行时间: ", execution_time)
 
     # 创建DataFrame，并指定列名
-    df = pd.DataFrame(result, columns=["m1", "m2", "TV"])
-    excel_filename = "k_color3_domain20_fast.xlsx"
+    df = pd.DataFrame(result, columns=["w1", "w2", "TV"])
+    excel_filename = "color1/color1_domain20_max1.xlsx"
     df.to_excel(excel_filename, index=False)
 
 
-    # fig = go.Figure(data=[go.Scatter3d(
-    #     x=res[:, 0],
-    #     y=res[:, 1],
-    #     z=res[:, 2],
-    #     mode='markers',
-    #     marker=dict(
-    #         size=10,  # 点的大小
-    #         color=res[:, 2],  # 使用 z 轴的值作为颜色
-    #         colorscale='Viridis',  # 颜色渐变方案
-    #         colorbar=dict(title='Z轴值'),  # 添加颜色条
-    #         showscale=True  # 显示颜色条
-    #     )
-    # )])
-    # # 设置图形标题和坐标轴标签
-    # fig.update_layout(title='edge-domain7', scene=dict(
-    #                 xaxis_title='E-R1',
-    #                 yaxis_title='E-R2',
-    #                 zaxis_title='TV'))
-    # fig.write_html('domain_77.html')
-    # fig.show()
+
+
+
+
+
+# if __name__ == '__main__':
+#     # mln1 = "models\\E-R1.mln"
+#     # mln2 = "models\\E-R2.mln"
+#     # mln1 = "models\\deskmate.mln"
+#     # mln2 = "models\\deskmate.mln"
+#     # mln1 = "models\\k_colored_graph_3.mln"
+#     # mln2 = "models\\k_colored_graph_3.1.mln"
+#
+#     # mln1 = "models\\employment.mln"
+#     # mln2 = "models\\employment.mln"
+#     # mln1 = "models\\exists-friends-smokes.mln"
+#     # mln2 = "models\\exists-friends-smokes.mln"
+#     # mln1 = "models\\friends-smokes.mln"
+#     # mln2 = "models\\friends-smokes.mln"
+#     # mln1 = "models\\weightedcolors.mln"
+#     # mln2 = "models\\weightedcolors.mln"
+#     # vertex = 20
+#     # m = math.floor(vertex/3)*math.ceil(vertex/3)+1
+#     # v1 = [0.5 + 0.5 * i for i in range(2 * m)]
+#     # v2 = np.linspace(math.ceil(vertex / 2), m, num=2 * m, endpoint=True)
+#     weight1 = [0.1*(i+1) for i in range(20)]
+#     weight2 = [0.1*(i+1) for i in range(20)]
+#     # [f_weight1, x1] = edge_weight(mln1)
+#     # [f_weight2, x2] = edge_weight(mln2)
+#     #
+#     # f_weight1 = sympy.simplify(f_weight1)
+#     # f_weight2 = sympy.simplify(f_weight2)
+#     #
+#     # for i in range(2 * m):
+#     #     w1[i] = newton(f_weight1 - v1[i], x1, 1, 0.001, 100)
+#     #     w2[i] = newton(f_weight2 - v2[i], x2, 1, 0.001, 100)
+#
+#     combinations = list(itertools.product(weight1, weight2))
+#     result = []
+#     # res.append(MLN_TV(mln1, mln2, float(w1[0]), float(w2[0])))
+#
+#     # for w in combinations:
+#     #     res.append(MLN_TV(mln1, mln2, float(w[0]), float(w[1])))
+#     # 注意polinomial.py/coeff_dict函数里的处理
+#     w1 = create_vars("w1")
+#     w2 = create_vars("w2")
+#     # last_w1 = '0'
+#     # last_w2 = '0'
+#     # for i in range(0, m+1):
+#     #     result.append([i, i, 0])
+#     #     with open(mln1, 'r', encoding='utf-8') as file:
+#     #         lines = file.readlines()
+#     #     lines[9] = lines[9].replace(last_w1, str(i), 1)
+#     #     lines[10] = lines[10].replace(last_w1, str(i), 1)
+#     #     lines[11] = lines[11].replace(last_w1, str(i), 1)
+#     #     with open(mln1, 'w', encoding='utf-8') as file:
+#     #         file.writelines(lines)
+#     #     for j in range(i+1, m+1):
+#     #         with open(mln2, 'r', encoding='utf-8') as file:
+#     #             lines = file.readlines()
+#     #         lines[9] = lines[9].replace(last_w2, str(j), 1)
+#     #         lines[10] = lines[10].replace(last_w2, str(j), 1)
+#     #         lines[11] = lines[11].replace(last_w2, str(j), 1)
+#     #         with open(mln2, 'w', encoding='utf-8') as file:
+#     #             file.writelines(lines)
+#     #         res = MLN_TV2(mln1, mln2)
+#     #         result.append([i, j, res])
+#     #         result.append([j, i, res])
+#     #         last_w1 = str(i)
+#     #         last_w2 = str(j)
+#
+#
+#     start_time = time.time()
+#     [x, y, res] = MLN_TV(mln1, mln2, w1, w2)
+#     end_time = time.time()
+#
+#     # 计算运行时间
+#     execution_time = end_time - start_time
+#     print(f"k_colored_graph_1代码运行时间: {execution_time:.6f} 秒")
+#     # print(res)
+#
+#     start_time = time.time()
+#     for w in combinations:
+#         result.append([w[0], w[1], res.subs({w1: w[0], w2: w[1]})])
+#     end_time = time.time()
+#     execution_time = end_time - start_time
+#     # 打印结果
+#     print("代码运行时间: ", execution_time)
+#
+#     # 创建DataFrame，并指定列名
+#     df = pd.DataFrame(result, columns=["m1", "m2", "TV"])
+#     excel_filename = "k_color1_domain10_fast.xlsx"
+#     df.to_excel(excel_filename, index=False)
+#
+#
+#     # fig = go.Figure(data=[go.Scatter3d(
+#     #     x=res[:, 0],
+#     #     y=res[:, 1],
+#     #     z=res[:, 2],
+#     #     mode='markers',
+#     #     marker=dict(
+#     #         size=10,  # 点的大小
+#     #         color=res[:, 2],  # 使用 z 轴的值作为颜色
+#     #         colorscale='Viridis',  # 颜色渐变方案
+#     #         colorbar=dict(title='Z轴值'),  # 添加颜色条
+#     #         showscale=True  # 显示颜色条
+#     #     )
+#     # )])
+#     # # 设置图形标题和坐标轴标签
+#     # fig.update_layout(title='edge-domain7', scene=dict(
+#     #                 xaxis_title='E-R1',
+#     #                 yaxis_title='E-R2',
+#     #                 zaxis_title='TV'))
+#     # fig.write_html('domain_77.html')
+#     # fig.show()
